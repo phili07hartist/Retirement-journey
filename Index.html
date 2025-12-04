@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pension Member Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f6f9;
+        }
+        .tab-button.active {
+            border-bottom: 3px solid #0056b3;
+            color: #0056b3;
+            font-weight: 600;
+        }
+        .metric-card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+        }
+        .data-label {
+            color: #555;
+            font-size: 0.875rem;
+            margin-bottom: 4px;
+        }
+        .data-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield; /* Firefox */
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none; /* Chrome, Safari, Edge */
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Header -->
+        <header class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-900">Retirement Plan</h1>
+            <p id="member-name" class="text-lg text-gray-600 mt-1"></p>
+        </header>
+
+        <!-- Tab Navigation (Re-ordered) -->
+        <nav class="bg-white rounded-xl shadow-lg p-1 mb-8">
+            <div class="flex border-b border-gray-200">
+                <button id="tab-summary" class="tab-button p-4 text-center w-1/4 text-gray-600 hover:text-blue-700 transition duration-150 active" onclick="showTab('summary')">
+                    Plan Summary
+                </button>
+                <button id="tab-projection" class="tab-button p-4 text-center w-1/4 text-gray-600 hover:text-blue-700 transition duration-150" onclick="showTab('projection')">
+                    Future Projection
+                </button>
+                <!-- LIFESTYLE TAB (MOVED to 3rd) -->
+                <button id="tab-lifestyle" class="tab-button p-4 text-center w-1/4 text-gray-600 hover:text-blue-700 transition duration-150" onclick="showTab('lifestyle')">
+                    Lifestyle
+                </button>
+                <!-- RETIREMENT OPTIONS TAB (MOVED to 4th) -->
+                <button id="tab-options" class="tab-button p-4 text-center w-1/4 text-gray-600 hover:text-blue-700 transition duration-150" onclick="showTab('options')">
+                    Retirement Options
+                </button>
+            </div>
+        </nav>
+
+        <!-- Content Area (Re-ordered) -->
+        <div id="content-area">
+            <!-- 1. Plan Summary Tab -->
+            <div id="summary" class="tab-content">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Current & Lifetime Metrics</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                    <!-- Current Plan Value -->
+                    <div class="metric-card bg-white p-6 rounded-xl border-t-4 border-blue-500">
+                        <p class="data-label">Current Plan Value</p>
+                        <p id="current-value" class="data-value text-blue-700">Loading...</p>
+                        <p class="text-sm text-gray-500 mt-2">Value as of today.</p>
+                    </div>
+
+                    <!-- Total Contributions -->
+                    <div class="metric-card bg-white p-6 rounded-xl border-t-4 border-indigo-500">
+                        <p class="data-label">Lifetime Total Contributions</p>
+                        <p id="total-contributions" class="data-value">Loading...</p>
+                        <p class="text-sm text-gray-500 mt-2">Personal + Company total.</p>
+                    </div>
+
+                    <!-- Plan Profit/Loss -->
+                    <div class="metric-card bg-white p-6 rounded-xl border-t-4 border-green-500">
+                        <p class="data-label">Lifetime Investment Return</p>
+                        <p id="profit-loss" class="data-value text-green-700">Loading...</p>
+                        <p id="profit-loss-status" class="text-sm text-gray-500 mt-2">Value vs. Contributions</p>
+                    </div>
+                    
+                    <!-- Years till Retirement -->
+                    <div class="metric-card bg-white p-6 rounded-xl border-t-4 border-gray-500">
+                        <p class="data-label">Years till Retirement (Age <span id="retirement-age"></span>)</p>
+                        <p id="years-to-retirement" class="data-value">Loading...</p>
+                        <p class="text-sm text-gray-500 mt-2">Based on your current age of <span id="current-age"></span>.</p>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold text-gray-800 mt-10 mb-4">Detailed Contribution Breakdown (Lifetime)</h3>
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Personal Contributions -->
+                        <div>
+                            <p class="data-label">Personal Contributions</p>
+                            <p id="personal-value" class="data-value text-purple-700">Loading...</p>
+                            <p class="text-sm text-gray-500 mt-1">From salary: <span id="personal-pct"></span></p>
+                        </div>
+                        <!-- Company Contributions -->
+                        <div>
+                            <p class="data-label">Company Contributions</p>
+                            <p id="company-value" class="data-value text-cyan-700">Loading...</p>
+                            <p class="text-sm text-gray-500 mt-1">From salary: <span id="company-pct"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Plan Projection Tab -->
+            <div id="projection" class="tab-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Estimated Plan Value at Retirement</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+                    <!-- Realistic Scenario -->
+                    <div class="bg-white p-6 rounded-xl border-t-8 border-yellow-400 metric-card">
+                        <p class="text-xs font-semibold uppercase text-gray-500">Realistic Scenario (Expected Growth)</p>
+                        <p id="proj-base" class="text-4xl font-extrabold text-gray-900 mt-2">Loading...</p>
+                        <p class="text-gray-600 mt-3">This scenario uses standard inflation and returns assumptions.</p>
+                    </div>
+
+                    <!-- Strong Growth Scenario (Formerly Happy) -->
+                    <div class="bg-white p-6 rounded-xl border-t-8 border-green-500 metric-card">
+                        <p class="text-xs font-semibold uppercase text-gray-500">Strong Growth Scenario</p>
+                        <p id="proj-happy" class="text-4xl font-extrabold text-green-700 mt-2">Loading...</p>
+                        <p class="text-gray-600 mt-3">Assumes higher than average investment returns.</p>
+                    </div>
+
+                    <!-- Low Growth Scenario (Formerly Sad) -->
+                    <div class="bg-white p-6 rounded-xl border-t-8 border-red-500 metric-card">
+                        <p class="text-xs font-semibold uppercase text-gray-500">Low Growth Scenario</p>
+                        <p id="proj-sad" class="text-4xl font-extrabold text-red-700 mt-2">Loading...</p>
+                        <p class="text-gray-600 mt-3">Assumes lower than average investment returns or high inflation.</p>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Underlying Projection Assumptions</h3>
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <ul class="space-y-3">
+                        <li class="flex items-center">
+                            <svg class="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            <span class="font-medium">Inflation Rate:</span> <span id="assump-inflation" class="ml-2 text-gray-600"></span>
+                        </li>
+                        <li class="flex items-center">
+                            <svg class="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8v8"></path></svg>
+                            <span class="font-medium">Salary Growth Rate:</span> <span id="assump-salary-growth" class="ml-2 text-gray-600"></span>
+                        </li>
+                        <li class="flex items-center">
+                            <svg class="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v14M9 19h12M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2M12 8l12-3"></path></svg>
+                            <span class="font-medium">Investment Return (Realistic/Strong/Low):</span>
+                            <span class="ml-2 text-gray-600">
+                                <span id="assump-return-base"></span> /
+                                <span id="assump-return-happy"></span> /
+                                <span id="assump-return-sad"></span>
+                            </span>
+                        </li>
+                    </ul>
+                    <p class="text-sm text-gray-500 mt-4">These rates are reviewed annually and influence your final projected value.</p>
+                </div>
+            </div>
+
+            <!-- 3. Lifestyle Tab (MOVED & RENAMED) -->
+            <div id="lifestyle" class="tab-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Retirement Lifestyle Modeler</h2>
+                <p class="text-gray-600 mb-8">Estimate your desired monthly retirement expenses to understand your future income needs. All expenses should be entered as **current-day values** (the model will apply future inflation).</p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Input Form -->
+                    <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Monthly Income & Expense Inputs (Current Value)</h3>
+                        <form id="lifestyle-form" class="space-y-4">
+                            
+                            <!-- Income (UK Specific) -->
+                            <div>
+                                <label for="monthly-income" class="data-label block font-medium">Monthly Income (e.g., from State Pension/Other)</label>
+                                <div class="relative mt-1 rounded-md shadow-sm">
+                                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                        <span class="text-gray-500 sm:text-sm">£</span>
+                                    </div>
+                                    <input type="number" id="monthly-income" name="monthlyIncome" required min="0" value="1200" class="block w-full rounded-md border border-gray-300 pl-7 pr-12 py-2 text-lg focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Home Expenses (UK Specific) -->
+                                <div>
+                                    <label for="monthly-home" class="data-label block font-medium">Home Expenses (Mortgage/Rent)</label>
+                                    <div class="relative mt-1 rounded-md shadow-sm">
+                                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                            <span class="text-gray-500 sm:text-sm">£</span>
+                                        </div>
+                                        <input type="number" id="monthly-home" name="monthlyHome" required min="0" value="1200" class="block w-full rounded-md border border-gray-300 pl-7 pr-12 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
+                                    </div>
+                                </div>
+
+                                <!-- Utilities Expenses (UK Specific) -->
+                                <div>
+                                    <label for="monthly-utilities" class="data-label block font-medium">Utilities (Gas/Electric/Water/Council Tax)</label>
+                                    <div class="relative mt-1 rounded-md shadow-sm">
+                                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                            <span class="text-gray-500 sm:text-sm">£</span>
+                                        </div>
+                                        <input type="number" id="monthly-utilities" name="monthlyUtilities" required min="0" value="350" class="block w-full rounded-md border border-gray-300 pl-7 pr-12 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
+                                    </div>
+                                </div>
+
+                                <!-- Shopping Expenses (UK Specific) -->
+                                <div>
+                                    <label for="monthly-shopping" class="data-label block font-medium">Spending (Groceries/Shopping)</label>
+                                    <div class="relative mt-1 rounded-md shadow-sm">
+                                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                            <span class="text-gray-500 sm:text-sm">£</span>
+                                        </div>
+                                        <input type="number" id="monthly-shopping" name="monthlyShopping" required min="0" value="600" class="block w-full rounded-md border border-gray-300 pl-7 pr-12 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
+                                    </div>
+                                </div>
+
+                                <!-- Hobby/Leisure Expenses (UK Specific) -->
+                                <div>
+                                    <label for="monthly-hobby" class="data-label block font-medium">Leisure (Travel/Hobbies)</label>
+                                    <div class="relative mt-1 rounded-md shadow-sm">
+                                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                            <span class="text-gray-500 sm:text-sm">£</span>
+                                        </div>
+                                        <input type="number" id="monthly-hobby" name="monthlyHobby" required min="0" value="300" class="block w-full rounded-md border border-gray-300 pl-7 pr-12 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- SUBMIT BUTTON REMOVED -->
+                        </form>
+                    </div>
+
+                    <!-- Results and Guidance -->
+                    <div class="lg:col-span-1">
+                        <!-- Aggregated Results -->
+                        <div class="metric-card bg-white p-6 rounded-xl border-t-4 border-fuchsia-500 mb-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">Annual Aggregated Needs</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <p class="data-label">Total Annual Expenses</p>
+                                    <p id="annual-expenses" class="text-2xl font-bold text-red-600">Enter Values</p>
+                                </div>
+                                <div>
+                                    <p class="data-label">Total Annual Income (Excluding Pension)</p>
+                                    <p id="annual-income" class="text-2xl font-bold text-green-600">Enter Values</p>
+                                </div>
+                                <div>
+                                    <p class="data-label">Annual Pension Funding Gap / Surplus</p>
+                                    <p id="annual-gap" class="text-2xl font-bold">Enter Values</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modelling Explanation (UPDATED) -->
+                        <div class="bg-gray-100 p-4 rounded-xl shadow-inner border border-gray-200">
+                            <h4 class="font-bold text-gray-800 mb-2">How This Data Is Used</h4>
+                            <p class="text-sm text-gray-600">
+                                We'll use this information to project your future lifestyle vs your retirement savings.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Retirement Options Tab (MOVED) -->
+            <div id="options" class="tab-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Your Defined Contribution Retirement Options</h2>
+                <p class="text-gray-600 mb-8">As a member of a Flexible Defined Contribution scheme, you have several choices when you reach retirement age.</p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Annuity Option -->
+                    <div class="bg-white p-6 rounded-xl border-t-8 border-sky-500 metric-card">
+                        <h3 class="text-xl font-bold text-sky-700 mb-2">Guaranteed Income (Annuity)</h3>
+                        <p class="text-gray-700 mb-4">You use your pension fund to purchase a policy that guarantees you a fixed income for the rest of your life.</p>
+                        
+                        <!-- NEW Annuity Calculation Output -->
+                        <div class="mt-4 pt-4 border-t border-sky-100">
+                            <p class="data-label">Estimated Annual Annuity Income (from Realistic Projection)</p>
+                            <p id="annuity-annual-income" class="text-2xl font-bold text-sky-700">Loading...</p>
+                        </div>
+
+                        <div class="mt-4 pb-4 border-b border-sky-100">
+                            <p class="data-label">Annuity Income vs. Lifestyle Funding Gap</p>
+                            <p id="annuity-gap-comparison" class="text-xl font-bold">Loading...</p>
+                        </div>
+                        
+                        <!-- Custom Icon Structure -->
+                        <div class="text-sm text-gray-700 space-y-2 mt-4">
+                            <div class="flex items-start">
+                                <!-- Benefit Icon (Check) -->
+                                <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                <p><span class="font-medium">Benefit:</span> <span class="ml-1">Predictable, lifelong income stream.</span></p>
+                            </div>
+                            <div class="flex items-start">
+                                <!-- Risk Icon (Alert Triangle) -->
+                                <svg class="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.3 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                <p><span class="font-medium">Risk:</span> <span class="ml-1">No further investment growth potential.</span></p>
+                            </div>
+                            <div class="flex items-start">
+                                <!-- Assumption Icon (Info) -->
+                                <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <p><span class="font-medium">Key Assumption:</span> <span class="ml-1">Annuity Rate (<span id="assump-annuity-rate"></span>)</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drawdown Option -->
+                    <div class="bg-white p-6 rounded-xl border-t-8 border-teal-500 metric-card">
+                        <h3 class="text-xl font-bold text-teal-700 mb-2">Flexible Income (Drawdown)</h3>
+                        <p class="text-gray-700 mb-4">You keep your money invested and take income directly from the fund as needed. Your fund can still grow, but it can also fall.</p>
+                        
+                        <!-- Custom Icon Structure -->
+                        <div class="text-sm text-gray-700 space-y-2">
+                            <div class="flex items-start">
+                                <!-- Benefit Icon (Check) -->
+                                <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                <p><span class="font-medium">Benefit:</span> <span class="ml-1">Flexibility and potential for investment growth.</span></p>
+                            </div>
+                            <div class="flex items-start">
+                                <!-- Risk Icon (Alert Triangle) -->
+                                <svg class="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.3 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                <p><span class="font-medium">Risk:</span> <span class="ml-1">Fund could run out if withdrawals are too high.</span></p>
+                            </div>
+                            <div class="flex items-start">
+                                <!-- Assumption Icon (Info) -->
+                                <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <p><span class="font-medium">Key Assumption:</span> <span class="ml-1">Initial Withdrawal Rate (<span id="assump-drawdown-rate"></span>)</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lump Sum Option -->
+                    <div class="bg-white p-6 rounded-xl border-t-8 border-pink-500 metric-card">
+                        <h3 class="text-xl font-bold text-pink-700 mb-2">Take a Lump Sum</h3>
+                        <p class="text-gray-700 mb-4">You can withdraw your entire pension fund as cash. The first 25% is typically tax-free, and the rest is taxed at your marginal rate.</p>
+
+                        <!-- Custom Icon Structure -->
+                        <div class="text-sm text-gray-700 space-y-2">
+                            <div class="flex items-start">
+                                <!-- Benefit Icon (Check) -->
+                                <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                <p><span class="font-medium">Benefit:</span> <span class="ml-1">Immediate access to capital.</span></p>
+                            </div>
+                            <div class="flex items-start">
+                                <!-- Risk Icon (Alert Triangle) -->
+                                <svg class="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.3 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                <p><span class="font-medium">Risk:</span> <span class="ml-1">Tax implications and loss of future guaranteed income.</span></p>
+                            </div>
+                            <div class="flex items-start">
+                                <!-- Note Icon (Document) -->
+                                <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2-4v4m0 0v-4m0 4h-4m4 0h-4m-4-4V6a2 2 0 012-2h4l2 2m0 0l2-2h-4a2 2 0 00-2 2v10a2 2 0 002 2h4a2 2 0 002-2v-4"></path></svg>
+                                <p><span class="font-medium">Note:</span> <span class="ml-1">Tax-free cash limits apply.</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Global storage for lifestyle needs (used by Annuity comparison)
+        let lifestyleNeeds = {
+            annualExpenses: 0,
+            annualIncome: 0,
+            annualGap: 0
+        };
+
+        // Mock Data for demonstration purposes
+        const memberData = {
+            name: "Alex Johnson",
+            currentAge: 35,
+            retirementAge: 65,
+            startDate: "2015-01-01",
+            lifetime: {
+                totalValue: 125890.50,
+                totalPersonalContribution: 55000.00,
+                totalCompanyContribution: 55000.00,
+                personalSalaryPct: "5%",
+                companySalaryPct: "5%",
+            },
+            projections: {
+                // Realistic Projection Pot Size
+                base: 450000.00, 
+                happy: 650000.00,
+                sad: 300000.00,
+            },
+            assumptions: {
+                inflation: "2.5%",
+                salaryGrowth: "3.0% p.a.",
+                investmentReturnBase: "5.0% p.a.",
+                investmentReturnHappy: "8.0% p.a.",
+                investmentReturnSad: "3.0% p.a.",
+                // Annuity Rate (used in calculation)
+                annuityRate: "4.5%", 
+                drawdownWithdrawal: "4.0% initial rate",
+            }
+        };
+
+        // Utility function to format currency (UK Specific)
+        const formatCurrency = (amount, isGap = false) => {
+            let colorClass = '';
+            if (isGap) {
+                colorClass = amount >= 0 ? 'text-red-600' : 'text-green-600';
+            }
+
+            const formattedAmount = new Intl.NumberFormat('en-GB', { // Changed to en-GB
+                style: 'currency',
+                currency: 'GBP', // Changed to GBP
+                minimumFractionDigits: 2,
+            }).format(Math.abs(amount));
+
+            // Return span with color class if needed, otherwise just the amount
+            if (isGap) {
+                const status = amount >= 0 ? '(Funding Gap)' : '(Surplus)';
+                return `<span class="${colorClass}">${formattedAmount}</span> <span class="text-lg font-normal text-gray-600">${status}</span>`;
+            }
+            return formattedAmount;
+        };
+
+        // Function to render the Summary tab data
+        const renderSummary = (data) => {
+            const { lifetime, currentAge, retirementAge } = data;
+
+            // Header Info
+            document.getElementById('member-name').textContent = `Welcome back, ${data.name}.`;
+            document.getElementById('current-age').textContent = currentAge;
+            document.getElementById('retirement-age').textContent = retirementAge;
+
+            // Calculations
+            const totalContributions = lifetime.totalPersonalContribution + lifetime.totalCompanyContribution;
+            const profitLoss = lifetime.totalValue - totalContributions;
+            const yearsToRetirement = retirementAge - currentAge;
+
+            // Render Core Metrics
+            document.getElementById('current-value').textContent = formatCurrency(lifetime.totalValue);
+            document.getElementById('total-contributions').textContent = formatCurrency(totalContributions);
+            
+            document.getElementById('profit-loss').textContent = formatCurrency(Math.abs(profitLoss));
+            
+            // Set profit/loss color and status
+            const profitLossElement = document.getElementById('profit-loss');
+            const profitLossStatusElement = document.getElementById('profit-loss-status');
+            
+            if (profitLoss >= 0) {
+                profitLossElement.classList.remove('text-red-700');
+                profitLossElement.classList.add('text-green-700');
+                profitLossStatusElement.textContent = 'Lifetime Gain';
+            } else {
+                profitLossElement.classList.remove('text-green-700');
+                profitLossElement.classList.add('text-red-700');
+                profitLossStatusElement.textContent = 'Lifetime Loss';
+            }
+
+            document.getElementById('years-to-retirement').textContent = `${yearsToRetirement} years`;
+
+            // Detailed Contributions
+            document.getElementById('personal-value').textContent = formatCurrency(lifetime.totalPersonalContribution);
+            document.getElementById('personal-pct').textContent = lifetime.personalSalaryPct;
+            document.getElementById('company-value').textContent = formatCurrency(lifetime.totalCompanyContribution);
+            document.getElementById('company-pct').textContent = lifetime.companySalaryPct;
+        };
+
+        // Function to render the Projection tab data
+        const renderProjection = (data) => {
+            const { projections, assumptions } = data;
+
+            // Render Projections
+            document.getElementById('proj-base').textContent = formatCurrency(projections.base);
+            document.getElementById('proj-happy').textContent = formatCurrency(projections.happy);
+            document.getElementById('proj-sad').textContent = formatCurrency(projections.sad);
+
+            // Render Assumptions
+            document.getElementById('assump-inflation').textContent = assumptions.inflation;
+            document.getElementById('assump-salary-growth').textContent = assumptions.salaryGrowth;
+            document.getElementById('assump-return-base').textContent = assumptions.investmentReturnBase;
+            document.getElementById('assump-return-happy').textContent = assumptions.investmentReturnHappy;
+            document.getElementById('assump-return-sad').textContent = assumptions.investmentReturnSad;
+        };
+        
+        /**
+         * Calculates the annual income from a simple annuity using the projected pot size.
+         */
+        const calculateAnnuityIncome = (data) => {
+            // Use Realistic Pot Size (base)
+            const projectedPot = data.projections.base; 
+            
+            // Parse annuity rate (e.g., "4.5%" -> 0.045)
+            const rateString = data.assumptions.annuityRate;
+            const annuityRate = parseFloat(rateString) / 100;
+
+            const annualIncome = projectedPot * annuityRate;
+            return annualIncome;
+        };
+
+        // Function to render the Options tab data
+        const renderOptions = (data) => {
+            const { assumptions } = data;
+
+            // 1. Render Assumptions
+            document.getElementById('assump-annuity-rate').textContent = assumptions.annuityRate;
+            document.getElementById('assump-drawdown-rate').textContent = assumptions.drawdownWithdrawal;
+
+            // 2. Annuity Calculation and Comparison
+            if (lifestyleNeeds.annualGap === 0) {
+                document.getElementById('annuity-annual-income').textContent = "Complete Lifestyle tab first";
+                document.getElementById('annuity-gap-comparison').textContent = "Complete Lifestyle tab first";
+                document.getElementById('annuity-gap-comparison').classList.remove('text-red-600', 'text-green-600');
+                document.getElementById('annuity-gap-comparison').classList.add('text-gray-900');
+                return;
+            }
+
+            const annualAnnuityIncome = calculateAnnuityIncome(data);
+            
+            // The required funding gap is the annual amount the pension needs to cover.
+            const pensionFundingGap = lifestyleNeeds.annualGap;
+            
+            // Annuity Surplus/Deficit:
+            // If Gap > 0, we need income. Deficit = Gap - AnnuityIncome
+            // If Gap < 0, we have a surplus, and the total surplus is AnnuityIncome + (Absolute Gap)
+            // Simpler: The Net Result is Annual Annuity Income - Pension Funding Gap (Gap is negative if it's a surplus)
+            const netResult = annualAnnuityIncome - pensionFundingGap;
+            
+            // Render results
+            document.getElementById('annuity-annual-income').textContent = formatCurrency(annualAnnuityIncome);
+
+            const comparisonElement = document.getElementById('annuity-gap-comparison');
+            comparisonElement.innerHTML = ''; // Clear previous content
+            comparisonElement.classList.remove('text-red-600', 'text-green-600', 'text-gray-900');
+            
+            const comparisonText = formatCurrency(Math.abs(netResult));
+            
+            if (netResult >= 0) {
+                // Annuity covers the need, or adds to the existing surplus (Net Result is positive)
+                comparisonElement.innerHTML = `${comparisonText} <span class="text-lg font-normal text-gray-600">(Surplus over Target)</span>`;
+                comparisonElement.classList.add('text-green-600');
+            } else {
+                // Annuity does not cover the need (Net Result is negative)
+                comparisonElement.innerHTML = `${comparisonText} <span class="text-lg font-normal text-gray-600">(Deficit below Target)</span>`;
+                comparisonElement.classList.add('text-red-600');
+            }
+        };
+
+        /**
+         * Calculates and displays the annual income/expense totals from the lifestyle form.
+         * Also updates the global lifestyleNeeds object.
+         */
+        const calculateLifestyle = (form) => {
+            // Get inputs (ensure they are parsed as floats)
+            const income = parseFloat(document.getElementById('monthly-income').value) || 0;
+            const home = parseFloat(document.getElementById('monthly-home').value) || 0;
+            const utilities = parseFloat(document.getElementById('monthly-utilities').value) || 0;
+            const shopping = parseFloat(document.getElementById('monthly-shopping').value) || 0;
+            const hobby = parseFloat(document.getElementById('monthly-hobby').value) || 0;
+
+            // Calculations
+            const totalMonthlyExpenses = home + utilities + shopping + hobby;
+            
+            const annualIncome = income * 12;
+            const annualExpenses = totalMonthlyExpenses * 12;
+            // The gap is the amount the pension must cover (Expenses - Income)
+            const annualGap = annualExpenses - annualIncome; 
+
+            // Update Global State
+            lifestyleNeeds.annualExpenses = annualExpenses;
+            lifestyleNeeds.annualIncome = annualIncome;
+            lifestyleNeeds.annualGap = annualGap;
+            
+            // Render Results
+            document.getElementById('annual-expenses').textContent = formatCurrency(annualExpenses);
+            document.getElementById('annual-income').textContent = formatCurrency(annualIncome);
+
+            const annualGapElement = document.getElementById('annual-gap');
+            annualGapElement.innerHTML = ''; // Clear previous content
+            annualGapElement.classList.remove('text-red-600', 'text-green-600', 'text-gray-900');
+
+            if (annualGap > 0) {
+                annualGapElement.innerHTML = formatCurrency(annualGap, true);
+                annualGapElement.classList.add('text-red-600');
+            } else if (annualGap < 0) {
+                annualGapElement.innerHTML = formatCurrency(annualGap, true);
+                annualGapElement.classList.add('text-green-600');
+            } else {
+                annualGapElement.textContent = formatCurrency(0);
+                annualGapElement.classList.add('text-gray-900');
+            }
+        }
+
+        /**
+         * Initializes the lifestyle tab logic, including setting up the form listener.
+         */
+        const renderLifestyle = () => {
+            const form = document.getElementById('lifestyle-form');
+            if (!form) return; 
+
+            // Add submit listener only once
+            if (!form.dataset.listenerAdded) {
+                // Add event listeners for instant re-calculation when inputs change
+                form.querySelectorAll('input[type="number"]').forEach(input => {
+                    input.addEventListener('input', () => calculateLifestyle(form));
+                });
+                form.dataset.listenerAdded = 'true'; // Mark as added
+            }
+
+            // Run initial calculation with default values
+            calculateLifestyle(form);
+        };
+
+
+        // Function to handle tab switching
+        window.showTab = (tabId) => {
+            // Hide all tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            // Deactivate all buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Show the selected tab content
+            const selectedContent = document.getElementById(tabId);
+            if (selectedContent) {
+                selectedContent.classList.remove('hidden');
+            }
+
+            // Activate the selected button
+            const selectedButton = document.getElementById(`tab-${tabId}`);
+            if (selectedButton) {
+                selectedButton.classList.add('active');
+            }
+            
+            // Re-calculate necessary metrics when the tab is opened
+            if (tabId === 'lifestyle') {
+                const form = document.getElementById('lifestyle-form');
+                if(form) calculateLifestyle(form);
+            }
+            if (tabId === 'options') {
+                // Ensure the lifestyle needs are calculated before rendering options
+                const form = document.getElementById('lifestyle-form');
+                if(form) calculateLifestyle(form); 
+                renderOptions(memberData);
+            }
+        };
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSummary(memberData);
+            renderProjection(memberData);
+            renderLifestyle(); // Initialize lifestyle calculator logic and global state
+            showTab('summary'); // Start on the Summary tab
+        });
+    </script>
+</body>
+</html>
